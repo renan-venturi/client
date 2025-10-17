@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 import { PrismaModule } from './common/prisma/prisma.module';
-import { AuthModule } from './modules/auth/auth.module';
 import { ClientModule } from './modules/client/client.module';
 import { HealthModule } from './modules/health/health.module';
 
@@ -20,7 +19,6 @@ import { HealthModule } from './modules/health/health.module';
       },
     ]),
     PrismaModule,
-    AuthModule,
     ClientModule,
     HealthModule,
   ],
