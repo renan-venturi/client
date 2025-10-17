@@ -33,7 +33,7 @@ async function bootstrap() {
   );
   
   // API prefix
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api');
   
   // Swagger documentation
   const config = new DocumentBuilder()
