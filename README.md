@@ -92,6 +92,48 @@ npm run start:prod
 Após iniciar a aplicação, acesse:
 - **Swagger UI**: http://localhost:3000/api/docs
 
+## 🚀 Endpoints da API
+
+### Health Check
+- `GET /api/health` - Status da aplicação
+- `GET /api/health/ready` - Verificação de prontidão
+
+### Clientes
+- `POST /api/clients` - Criar cliente
+- `GET /api/clients` - Listar todos os clientes
+- `GET /api/clients/:id` - Buscar cliente por ID
+- `PATCH /api/clients/:id` - Atualizar cliente
+- `DELETE /api/clients/:id` - Excluir cliente
+- `GET /api/clients/filter?name=...` - Filtrar clientes por nome
+- `GET /api/clients?email=...` - Filtrar clientes por email
+
+### Exemplos de Uso
+
+#### Criar Cliente
+```bash
+curl -X POST http://localhost:3000/api/clients \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "João Silva",
+    "email": "joao@example.com",
+    "password": "senha123",
+    "phone": "+5511999999999",
+    "address": "Rua das Flores, 123",
+    "bankingAgency": "1234",
+    "bankingAccount": "56789-0"
+  }'
+```
+
+#### Listar Clientes
+```bash
+curl http://localhost:3000/api/clients
+```
+
+#### Filtrar por Nome
+```bash
+curl "http://localhost:3000/api/clients/filter?name=João"
+```
+
 ## 🗄️ Banco de dados
 
 ### Comandos do Prisma
