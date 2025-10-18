@@ -98,6 +98,11 @@ Após iniciar a aplicação, acesse:
 - `GET /api/health` - Status da aplicação
 - `GET /api/health/ready` - Verificação de prontidão
 
+### Autenticação
+- `POST /api/auth/register` - Registrar novo cliente
+- `POST /api/auth/login` - Fazer login
+- `GET /api/auth/profile` - Obter perfil do usuário autenticado (requer token JWT)
+
 ### Clientes
 - `POST /api/clients` - Criar cliente
 - `GET /api/clients` - Listar todos os clientes
@@ -108,6 +113,35 @@ Após iniciar a aplicação, acesse:
 - `GET /api/clients?email=...` - Filtrar clientes por email
 
 ### Exemplos de Uso
+
+#### Registrar Cliente
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "João Silva",
+    "email": "joao@example.com",
+    "password": "senha123",
+    "bankingAgency": "1234",
+    "bankingAccount": "56789-0"
+  }'
+```
+
+#### Fazer Login
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "joao@example.com",
+    "password": "senha123"
+  }'
+```
+
+#### Obter Perfil (com token JWT)
+```bash
+curl -X GET http://localhost:3000/api/auth/profile \
+  -H "Authorization: Bearer SEU_TOKEN_JWT_AQUI"
+```
 
 #### Criar Cliente
 ```bash
