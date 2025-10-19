@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { CreateClientDto, UpdateClientDto, FilterClientDto } from './dto';
+import { CreateClientDto, UpdateClientDto, FilterClientDto, UpdateProfilePictureDto } from './dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -173,6 +173,57 @@ export class ClientService {
         throw error;
       }
       throw new Error('Erro ao remover cliente: ' + error.message);
+    }
+  }
+
+  async updateProfilePicture(id: string, updateProfilePictureDto: UpdateProfilePictureDto) {
+    try {
+      // Verificar se cliente existe
+      const existingClient = await this.prisma.client.findUnique({
+        where: { id },
+      });
+
+      if (!existingClient) {
+        throw new NotFoundException('Cliente não encontrado');
+      }
+
+      // Validações extras de segurança
+      const { profilePicture } = updateProfilePictureDto;
+      
+      // Verificar se a URL não é a mesma atual (evitar updates desnecessários)
+      if (existingClient.profilePicture === profilePicture) {
+        throw new ConflictException('A foto de perfil já é a mesma');
+      }
+
+      // Verificar se a URL não contém caracteres suspeitos
+      if (profilePicture.includes('<script>') || profilePicture.includes('javascript:')) {
+        throw new BadRequestException('URL contém conteúdo suspeito');
+      }
+
+      // Verificar se a URL não é muito longa (proteção contra DoS)
+      if (profilePicture.length > 500) {
+        throw new BadRequestException('URL muito longa');
+      }
+
+      const client = await this.prisma.client.update({
+        where: { id },
+        data: {
+          profilePicture: profilePicture.trim(), // Remove espaços em branco
+        },
+        select: {
+          id: true,
+          name: true,
+          profilePicture: true,
+          updatedAt: true,
+        },
+      });
+
+      return client;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error('Erro ao atualizar foto de perfil: ' + error.message);
     }
   }
 }

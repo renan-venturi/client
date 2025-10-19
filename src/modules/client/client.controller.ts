@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,12 +17,16 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ClientService } from './client.service';
-import { CreateClientDto, UpdateClientDto, FilterClientDto, ClientResponseDto } from './dto';
+import { CreateClientDto, UpdateClientDto, FilterClientDto, ClientResponseDto, UpdateProfilePictureDto, UpdateProfilePictureResponseDto } from './dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Clients')
 @Controller('clients')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
@@ -39,6 +44,10 @@ export class ClientController {
   @ApiResponse({
     status: 400,
     description: 'Dados inválidos',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticação inválido ou expirado',
   })
   async create(@Body() createClientDto: CreateClientDto) {
     return this.clientService.create(createClientDto);
@@ -62,6 +71,10 @@ export class ClientController {
     status: 200,
     description: 'Lista de clientes retornada com sucesso',
     type: [ClientResponseDto],
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticação inválido ou expirado',
   })
   async findAll(@Query() filterDto: FilterClientDto) {
     return this.clientService.findAll(filterDto);
@@ -150,5 +163,33 @@ export class ClientController {
   })
   async remove(@Param('id') id: string) {
     return this.clientService.remove(id);
+  }
+
+  @Patch(':id/profile-picture')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Atualizar foto de perfil do cliente' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID único do cliente',
+    example: 'clh1234567890abcdef',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Foto de perfil atualizada com sucesso',
+    type: UpdateProfilePictureResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cliente não encontrado',
+  })
+  async updateProfilePicture(
+    @Param('id') id: string,
+    @Body() updateProfilePictureDto: UpdateProfilePictureDto,
+  ): Promise<UpdateProfilePictureResponseDto> {
+    return this.clientService.updateProfilePicture(id, updateProfilePictureDto);
   }
 }
