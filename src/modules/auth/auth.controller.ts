@@ -78,4 +78,24 @@ export class AuthController {
   async getProfile(@Request() req) {
     return req.user;
   }
+
+  @Get('validate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Validar token de autenticação' })
+  @ApiResponse({
+    status: 200,
+    description: 'Token válido',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido ou expirado',
+  })
+  async validate(@Request() req) {
+    return {
+      userId: req.user.id,
+      email: req.user.email,
+      isValid: true
+    };
+  }
 }
