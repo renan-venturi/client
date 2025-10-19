@@ -20,7 +20,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ClientService } from './client.service';
-import { CreateClientDto, UpdateClientDto, FilterClientDto, ClientResponseDto, UpdateProfilePictureDto, UpdateProfilePictureResponseDto } from './dto';
+import { CreateClientDto, UpdateClientDto, FilterClientDto, ClientResponseDto, UpdateProfilePictureDto, UpdateProfilePictureResponseDto, UpdateBalanceDto, BalanceResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Clients')
@@ -191,5 +191,93 @@ export class ClientController {
     @Body() updateProfilePictureDto: UpdateProfilePictureDto,
   ): Promise<UpdateProfilePictureResponseDto> {
     return this.clientService.updateProfilePicture(id, updateProfilePictureDto);
+  }
+
+  @Patch(':id/balance/add')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Adicionar valor ao saldo do cliente' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID único do cliente',
+    example: 'clh1234567890abcdef',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Saldo adicionado com sucesso',
+    type: BalanceResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticação inválido ou expirado',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cliente não encontrado',
+  })
+  async addBalance(
+    @Param('id') id: string,
+    @Body() updateBalanceDto: UpdateBalanceDto,
+  ): Promise<BalanceResponseDto> {
+    return this.clientService.addBalance(id, updateBalanceDto);
+  }
+
+  @Patch(':id/balance/subtract')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Subtrair valor do saldo do cliente' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID único do cliente',
+    example: 'clh1234567890abcdef',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Saldo subtraído com sucesso',
+    type: BalanceResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos ou saldo insuficiente',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticação inválido ou expirado',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cliente não encontrado',
+  })
+  async subtractBalance(
+    @Param('id') id: string,
+    @Body() updateBalanceDto: UpdateBalanceDto,
+  ): Promise<BalanceResponseDto> {
+    return this.clientService.subtractBalance(id, updateBalanceDto);
+  }
+
+  @Get(':id/balance')
+  @ApiOperation({ summary: 'Consultar saldo do cliente' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID único do cliente',
+    example: 'clh1234567890abcdef',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Saldo consultado com sucesso',
+    type: BalanceResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token de autenticação inválido ou expirado',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Cliente não encontrado',
+  })
+  async getBalance(@Param('id') id: string): Promise<BalanceResponseDto> {
+    return this.clientService.getBalance(id);
   }
 }
