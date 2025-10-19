@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { CreateClientDto, UpdateClientDto, FilterClientDto, UpdateProfilePictureDto } from './dto';
+import { CreateClientDto, UpdateClientDto, FilterClientDto, UpdateProfilePictureDto, UpdateBalanceDto } from './dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -224,6 +224,106 @@ export class ClientService {
         throw error;
       }
       throw new Error('Erro ao atualizar foto de perfil: ' + error.message);
+    }
+  }
+
+  async addBalance(id: string, updateBalanceDto: UpdateBalanceDto) {
+    try {
+      // Verificar se cliente existe
+      const existingClient = await this.prisma.client.findUnique({
+        where: { id },
+      });
+
+      if (!existingClient) {
+        throw new NotFoundException('Cliente não encontrado');
+      }
+
+      const client = await this.prisma.client.update({
+        where: { id },
+        data: {
+          balance: {
+            increment: updateBalanceDto.amount,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          balance: true,
+          updatedAt: true,
+        },
+      });
+
+      return client;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error('Erro ao adicionar saldo: ' + error.message);
+    }
+  }
+
+  async subtractBalance(id: string, updateBalanceDto: UpdateBalanceDto) {
+    try {
+      // Verificar se cliente existe
+      const existingClient = await this.prisma.client.findUnique({
+        where: { id },
+      });
+
+      if (!existingClient) {
+        throw new NotFoundException('Cliente não encontrado');
+      }
+
+      // Verificar se tem saldo suficiente
+      if (existingClient.balance < updateBalanceDto.amount) {
+        throw new BadRequestException('Saldo insuficiente');
+      }
+
+      const client = await this.prisma.client.update({
+        where: { id },
+        data: {
+          balance: {
+            decrement: updateBalanceDto.amount,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          balance: true,
+          updatedAt: true,
+        },
+      });
+
+      return client;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error('Erro ao subtrair saldo: ' + error.message);
+    }
+  }
+
+  async getBalance(id: string) {
+    try {
+      const client = await this.prisma.client.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          balance: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!client) {
+        throw new NotFoundException('Cliente não encontrado');
+      }
+
+      return client;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error('Erro ao consultar saldo: ' + error.message);
     }
   }
 }
