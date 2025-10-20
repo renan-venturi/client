@@ -8,7 +8,6 @@ describe('AuthController', () => {
   let controller: AuthController;
   let service: jest.Mocked<AuthService>;
 
-  // Mock de resposta de autenticação
   const mockAuthResponse: AuthResponseDto = {
     access_token: 'jwt-token-123',
     user: {
@@ -20,7 +19,6 @@ describe('AuthController', () => {
     },
   };
 
-  // Mock de dados para registro
   const registerDto: RegisterDto = {
     name: 'João Silva',
     email: 'joao@example.com',
@@ -29,13 +27,11 @@ describe('AuthController', () => {
     bankingAccount: '56789-0',
   };
 
-  // Mock de dados para login
   const loginDto: LoginDto = {
     email: 'joao@example.com',
     password: 'senha123',
   };
 
-  // Mock de usuário autenticado
   const mockUser = {
     id: 'clh1234567890abcdef',
     name: 'João Silva',
@@ -45,7 +41,6 @@ describe('AuthController', () => {
   };
 
   beforeEach(async () => {
-    // Mock do AuthService
     const mockAuthService = {
       register: jest.fn(),
       login: jest.fn(),
@@ -74,117 +69,141 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 
-  // Testes para o método register
   describe('register', () => {
-    it('deve registrar um cliente com sucesso', async () => {
-      // Arrange
+    it('should register a client successfully', async () => {
       service.register.mockResolvedValue(mockAuthResponse);
 
-      // Act
       const result = await controller.register(registerDto);
 
-      // Assert
       expect(service.register).toHaveBeenCalledWith(registerDto);
       expect(result).toEqual(mockAuthResponse);
     });
 
-    it('deve lançar ConflictException quando email já existe', async () => {
-      // Arrange
+    it('should throw ConflictException when email already exists', async () => {
       const conflictError = new ConflictException('Email já está em uso');
       service.register.mockRejectedValue(conflictError);
 
-      // Act & Assert
       await expect(controller.register(registerDto)).rejects.toThrow(ConflictException);
       await expect(controller.register(registerDto)).rejects.toThrow('Email já está em uso');
       expect(service.register).toHaveBeenCalledWith(registerDto);
     });
 
-    it('deve lançar erro genérico quando service falha', async () => {
-      // Arrange
+    it('should throw generic error when service fails', async () => {
       const genericError = new Error('Erro ao registrar cliente: Database error');
       service.register.mockRejectedValue(genericError);
 
-      // Act & Assert
       await expect(controller.register(registerDto)).rejects.toThrow(genericError);
       expect(service.register).toHaveBeenCalledWith(registerDto);
     });
   });
 
-  // Testes para o método login
   describe('login', () => {
-    it('deve fazer login com sucesso', async () => {
-      // Arrange
+    it('should login successfully', async () => {
       service.login.mockResolvedValue(mockAuthResponse);
 
-      // Act
       const result = await controller.login(loginDto);
 
-      // Assert
       expect(service.login).toHaveBeenCalledWith(loginDto);
       expect(result).toEqual(mockAuthResponse);
     });
 
-    it('deve lançar UnauthorizedException quando credenciais são inválidas', async () => {
-      // Arrange
+    it('should throw UnauthorizedException when credentials are invalid', async () => {
       const unauthorizedError = new UnauthorizedException('Credenciais inválidas');
       service.login.mockRejectedValue(unauthorizedError);
 
-      // Act & Assert
       await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
       await expect(controller.login(loginDto)).rejects.toThrow('Credenciais inválidas');
       expect(service.login).toHaveBeenCalledWith(loginDto);
     });
 
-    it('deve lançar erro genérico quando service falha', async () => {
-      // Arrange
+    it('should throw generic error when service fails', async () => {
       const genericError = new Error('Erro ao fazer login: Database error');
       service.login.mockRejectedValue(genericError);
 
-      // Act & Assert
       await expect(controller.login(loginDto)).rejects.toThrow(genericError);
       expect(service.login).toHaveBeenCalledWith(loginDto);
     });
   });
 
-  // Testes para o método getProfile
   describe('getProfile', () => {
-    it('deve retornar perfil do usuário autenticado', async () => {
-      // Arrange
+    it('should return authenticated user profile', async () => {
       const mockRequest = {
         user: mockUser,
       };
 
-      // Act
       const result = await controller.getProfile(mockRequest);
 
-      // Assert
       expect(result).toEqual(mockUser);
     });
 
-    it('deve retornar undefined quando usuário não está autenticado', async () => {
-      // Arrange
+    it('should return undefined when user is not authenticated', async () => {
       const mockRequest = {
         user: undefined,
       };
 
-      // Act
       const result = await controller.getProfile(mockRequest);
 
-      // Assert
       expect(result).toBeUndefined();
     });
 
-    it('deve retornar null quando usuário é null', async () => {
-      // Arrange
+    it('should return null when user is null', async () => {
       const mockRequest = {
         user: null,
       };
 
-      // Act
       const result = await controller.getProfile(mockRequest);
 
-      // Assert
       expect(result).toBeNull();
+    });
+  });
+
+  describe('validate', () => {
+    it('should validate user successfully', async () => {
+      const mockRequest = {
+        user: mockUser,
+      };
+
+      const result = await controller.validate(mockRequest);
+
+      expect(result).toEqual({
+        userId: mockUser.id,
+        email: mockUser.email,
+        isValid: true,
+      });
+    });
+
+    it('should throw error when user is undefined', async () => {
+      const mockRequest = {
+        user: undefined,
+      };
+
+      await expect(controller.validate(mockRequest)).rejects.toThrow('Cannot read properties of undefined (reading \'id\')');
+    });
+
+    it('should throw error when user is null', async () => {
+      const mockRequest = {
+        user: null,
+      };
+
+      await expect(controller.validate(mockRequest)).rejects.toThrow('Cannot read properties of null (reading \'id\')');
+    });
+
+    it('should return correct information for authenticated user', async () => {
+      const mockRequest = {
+        user: {
+          id: 'clh1234567890abcdef',
+          email: 'joao@example.com',
+          name: 'João Silva',
+        },
+      };
+
+      const result = await controller.validate(mockRequest);
+
+      expect(result).toEqual({
+        userId: 'clh1234567890abcdef',
+        email: 'joao@example.com',
+        isValid: true,
+      });
     });
   });
 });
