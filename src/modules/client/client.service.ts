@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { RedisService } from '../../common/redis/redis.service';
 import { CreateClientDto, UpdateClientDto, FilterClientDto, UpdateProfilePictureDto, UpdateBalanceDto } from './dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ClientService {
   private readonly logger = new Logger(ClientService.name);
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService
+  ) {}
 
   async create(createClientDto: CreateClientDto) {
     try {
@@ -93,6 +97,16 @@ export class ClientService {
   async findOne(id: string) {
     try {
       const startedAt = Date.now();
+      const cacheKey = `client:${id}`;
+      
+      // Try to get from cache first
+      const cachedClient = await this.redis.get(cacheKey);
+      if (cachedClient) {
+        this.logger.log(`get:cache_hit id=${id} durationMs=${Date.now() - startedAt}`);
+        return JSON.parse(cachedClient);
+      }
+
+      this.logger.log(`get:cache_miss id=${id}`);
       const client = await this.prisma.client.findUnique({
         where: { id },
         select: {
@@ -113,6 +127,9 @@ export class ClientService {
         this.logger.warn(`get:not_found id=${id}`);
         throw new NotFoundException('Client not found');
       }
+
+      // Cache the result for 5 minutes (300 seconds)
+      await this.redis.set(cacheKey, JSON.stringify(client), 300);
       this.logger.log(`get:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
@@ -155,6 +172,8 @@ export class ClientService {
           updatedAt: true,
         },
       });
+      // Invalidate cache
+      await this.redis.del(`client:${id}`);
       this.logger.log(`update:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
@@ -182,6 +201,8 @@ export class ClientService {
       await this.prisma.client.delete({
         where: { id },
       });
+      // Invalidate cache
+      await this.redis.del(`client:${id}`);
       this.logger.log(`delete:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return { message: 'Cliente removido com sucesso' };
     } catch (error) {
@@ -236,6 +257,8 @@ export class ClientService {
           updatedAt: true,
         },
       });
+      // Invalidate cache
+      await this.redis.del(`client:${id}`);
       this.logger.log(`updateProfilePicture:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
