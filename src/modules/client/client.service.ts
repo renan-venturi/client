@@ -1,21 +1,25 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateClientDto, UpdateClientDto, FilterClientDto, UpdateProfilePictureDto, UpdateBalanceDto } from './dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ClientService {
+  private readonly logger = new Logger(ClientService.name);
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createClientDto: CreateClientDto) {
     try {
-      // Verificar se email já existe
+      const startedAt = Date.now();
+      this.logger.log(`create:start email=${createClientDto.email}`);
+
       const existingClient = await this.prisma.client.findUnique({
         where: { email: createClientDto.email },
       });
 
       if (existingClient) {
-        throw new ConflictException('Email já está em uso');
+        this.logger.warn(`create:conflict email=${createClientDto.email}`);
+        throw new ConflictException('Email already in use');
       }
 
       // Criptografar senha
@@ -30,17 +34,20 @@ export class ClientService {
 
       // Remover senha da resposta
       const { password, ...clientWithoutPassword } = client;
+      this.logger.log(`create:ok id=${client.id} durationMs=${Date.now() - startedAt}`);
       return clientWithoutPassword;
     } catch (error) {
+      this.logger.error(`create:fail email=${createClientDto?.email} error=${error?.message}`);
       if (error instanceof ConflictException) {
         throw error;
       }
-      throw new Error('Erro ao criar cliente: ' + error.message);
+      throw new InternalServerErrorException('Failed to create client');
     }
   }
 
   async findAll(filterDto?: FilterClientDto) {
     try {
+      const startedAt = Date.now();
       const where = {};
 
       if (filterDto?.name) {
@@ -75,15 +82,17 @@ export class ClientService {
           createdAt: 'desc',
         },
       });
-
+      this.logger.log(`list:ok count=${clients.length} durationMs=${Date.now() - startedAt}`);
       return clients;
     } catch (error) {
-      throw new Error('Erro ao buscar clientes: ' + error.message);
+      this.logger.error(`list:fail error=${error?.message}`);
+      throw new InternalServerErrorException('Failed to fetch clients');
     }
   }
 
   async findOne(id: string) {
     try {
+      const startedAt = Date.now();
       const client = await this.prisma.client.findUnique({
         where: { id },
         select: {
@@ -101,27 +110,31 @@ export class ClientService {
       });
 
       if (!client) {
-        throw new NotFoundException('Cliente não encontrado');
+        this.logger.warn(`get:not_found id=${id}`);
+        throw new NotFoundException('Client not found');
       }
-
+      this.logger.log(`get:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
+      this.logger.error(`get:fail id=${id} error=${error?.message}`);
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error('Erro ao buscar cliente: ' + error.message);
+      throw new InternalServerErrorException('Failed to fetch client');
     }
   }
 
   async update(id: string, updateClientDto: UpdateClientDto) {
     try {
+      const startedAt = Date.now();
       // Verificar se cliente existe
       const existingClient = await this.prisma.client.findUnique({
         where: { id },
       });
 
       if (!existingClient) {
-        throw new NotFoundException('Cliente não encontrado');
+        this.logger.warn(`update:not_found id=${id}`);
+        throw new NotFoundException('Client not found');
       }
 
       // Email não pode ser atualizado via UpdateClientDto
@@ -142,49 +155,55 @@ export class ClientService {
           updatedAt: true,
         },
       });
-
+      this.logger.log(`update:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
+      this.logger.error(`update:fail id=${id} error=${error?.message}`);
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error('Erro ao atualizar cliente: ' + error.message);
+      throw new InternalServerErrorException('Failed to update client');
     }
   }
 
   async remove(id: string) {
     try {
+      const startedAt = Date.now();
       // Verificar se cliente existe
       const existingClient = await this.prisma.client.findUnique({
         where: { id },
       });
 
       if (!existingClient) {
-        throw new NotFoundException('Cliente não encontrado');
+        this.logger.warn(`delete:not_found id=${id}`);
+        throw new NotFoundException('Client not found');
       }
 
       await this.prisma.client.delete({
         where: { id },
       });
-
+      this.logger.log(`delete:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return { message: 'Cliente removido com sucesso' };
     } catch (error) {
+      this.logger.error(`delete:fail id=${id} error=${error?.message}`);
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error('Erro ao remover cliente: ' + error.message);
+      throw new InternalServerErrorException('Failed to delete client');
     }
   }
 
   async updateProfilePicture(id: string, updateProfilePictureDto: UpdateProfilePictureDto) {
     try {
+      const startedAt = Date.now();
       // Verificar se cliente existe
       const existingClient = await this.prisma.client.findUnique({
         where: { id },
       });
 
       if (!existingClient) {
-        throw new NotFoundException('Cliente não encontrado');
+        this.logger.warn(`updateProfilePicture:not_found id=${id}`);
+        throw new NotFoundException('Client not found');
       }
 
       // Validações extras de segurança
@@ -192,17 +211,17 @@ export class ClientService {
       
       // Verificar se a URL não é a mesma atual (evitar updates desnecessários)
       if (existingClient.profilePicture === profilePicture) {
-        throw new ConflictException('A foto de perfil já é a mesma');
+        throw new ConflictException('Profile picture is the same');
       }
 
       // Verificar se a URL não contém caracteres suspeitos
       if (profilePicture.includes('<script>') || profilePicture.includes('javascript:')) {
-        throw new BadRequestException('URL contém conteúdo suspeito');
+        throw new BadRequestException('URL contains suspicious content');
       }
 
       // Verificar se a URL não é muito longa (proteção contra DoS)
       if (profilePicture.length > 500) {
-        throw new BadRequestException('URL muito longa');
+        throw new BadRequestException('URL too long');
       }
 
       const client = await this.prisma.client.update({
@@ -217,25 +236,28 @@ export class ClientService {
           updatedAt: true,
         },
       });
-
+      this.logger.log(`updateProfilePicture:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
+      this.logger.error(`updateProfilePicture:fail id=${id} error=${error?.message}`);
       if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) {
         throw error;
       }
-      throw new Error('Erro ao atualizar foto de perfil: ' + error.message);
+      throw new InternalServerErrorException('Failed to update profile picture');
     }
   }
 
   async addBalance(id: string, updateBalanceDto: UpdateBalanceDto) {
     try {
+      const startedAt = Date.now();
       // Verificar se cliente existe
       const existingClient = await this.prisma.client.findUnique({
         where: { id },
       });
 
       if (!existingClient) {
-        throw new NotFoundException('Cliente não encontrado');
+        this.logger.warn(`addBalance:not_found id=${id}`);
+        throw new NotFoundException('Client not found');
       }
 
       const client = await this.prisma.client.update({
@@ -252,30 +274,33 @@ export class ClientService {
           updatedAt: true,
         },
       });
-
+      this.logger.log(`addBalance:ok id=${id} amount=${updateBalanceDto.amount} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
+      this.logger.error(`addBalance:fail id=${id} amount=${updateBalanceDto?.amount} error=${error?.message}`);
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error('Erro ao adicionar saldo: ' + error.message);
+      throw new InternalServerErrorException('Failed to add balance');
     }
   }
 
   async subtractBalance(id: string, updateBalanceDto: UpdateBalanceDto) {
     try {
+      const startedAt = Date.now();
       // Verificar se cliente existe
       const existingClient = await this.prisma.client.findUnique({
         where: { id },
       });
 
       if (!existingClient) {
-        throw new NotFoundException('Cliente não encontrado');
+        this.logger.warn(`subtractBalance:not_found id=${id}`);
+        throw new NotFoundException('Client not found');
       }
 
       // Verificar se tem saldo suficiente
       if (existingClient.balance < updateBalanceDto.amount) {
-        throw new BadRequestException('Saldo insuficiente');
+        throw new BadRequestException('Insufficient balance');
       }
 
       const client = await this.prisma.client.update({
@@ -292,18 +317,20 @@ export class ClientService {
           updatedAt: true,
         },
       });
-
+      this.logger.log(`subtractBalance:ok id=${id} amount=${updateBalanceDto.amount} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
+      this.logger.error(`subtractBalance:fail id=${id} amount=${updateBalanceDto?.amount} error=${error?.message}`);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      throw new Error('Erro ao subtrair saldo: ' + error.message);
+      throw new InternalServerErrorException('Failed to subtract balance');
     }
   }
 
   async getBalance(id: string) {
     try {
+      const startedAt = Date.now();
       const client = await this.prisma.client.findUnique({
         where: { id },
         select: {
@@ -315,15 +342,17 @@ export class ClientService {
       });
 
       if (!client) {
-        throw new NotFoundException('Cliente não encontrado');
+        this.logger.warn(`getBalance:not_found id=${id}`);
+        throw new NotFoundException('Client not found');
       }
-
+      this.logger.log(`getBalance:ok id=${id} durationMs=${Date.now() - startedAt}`);
       return client;
     } catch (error) {
+      this.logger.error(`getBalance:fail id=${id} error=${error?.message}`);
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new Error('Erro ao consultar saldo: ' + error.message);
+      throw new InternalServerErrorException('Failed to get balance');
     }
   }
 }
