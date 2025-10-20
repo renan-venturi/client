@@ -1,6 +1,18 @@
-# Loomi Client - Microsserviço
+# 🏦 Loomi Client - Microsserviço
 
-Microsserviço de gerenciamento de clientes da plataforma Loomi.
+Microsserviço de gerenciamento de clientes da plataforma Loomi, construído com NestJS, TypeScript, Prisma e PostgreSQL.
+
+## ✨ Funcionalidades
+
+- ✅ **CRUD completo de clientes** - Criar, listar, buscar, atualizar e excluir clientes
+- ✅ **Sistema de autenticação** - Registro e login com JWT
+- ✅ **Cache Redis** - Cache inteligente para consultas frequentes
+- ✅ **Validação robusta** - Validação de dados com class-validator
+- ✅ **Health checks** - Monitoramento de saúde da aplicação
+- ✅ **API RESTful** - Endpoints padronizados e documentados
+- ✅ **Testes unitários** - 98 testes com cobertura completa
+- ✅ **Logs estruturados** - Logging em inglês com métricas de performance
+- ✅ **Segurança** - Helmet, CORS, rate limiting e validação de entrada
 
 ## 🚀 Tecnologias e Versões
 
@@ -15,15 +27,18 @@ Microsserviço de gerenciamento de clientes da plataforma Loomi.
 - **PostgreSQL**: 15
 
 ### Dependências Principais
-- **@nestjs/common**: ^10.3.0
-- **@nestjs/core**: ^10.3.0
-- **@nestjs/platform-express**: ^10.3.0
-- **@nestjs/config**: ^3.1.1
-- **@nestjs/swagger**: ^7.1.17
-- **@nestjs/jwt**: ^10.2.0
-- **@nestjs/passport**: ^10.0.3
-- **@nestjs/throttler**: ^5.1.1
-- **@prisma/client**: ^5.19.1
+- **@nestjs/common**: ^10.3.0 - Framework base
+- **@nestjs/core**: ^10.3.0 - Core do NestJS
+- **@nestjs/platform-express**: ^10.3.0 - Servidor HTTP
+- **@nestjs/config**: ^3.1.1 - Gerenciamento de configurações
+- **@nestjs/swagger**: ^7.1.17 - Documentação automática da API
+- **@nestjs/jwt**: ^10.2.0 - Autenticação JWT
+- **@nestjs/passport**: ^10.0.3 - Estratégias de autenticação
+- **@nestjs/throttler**: ^5.1.1 - Rate limiting
+- **@prisma/client**: ^5.19.1 - ORM para banco de dados
+- **redis**: ^4.6.0 - Cache Redis
+- **bcrypt**: ^5.1.1 - Hash de senhas
+- **passport-jwt**: ^4.0.1 - Estratégia JWT
 
 ### Dependências de Desenvolvimento
 - **@nestjs/cli**: ^10.2.1
@@ -91,6 +106,22 @@ npm run start:prod
 
 Após iniciar a aplicação, acesse:
 - **Swagger UI**: http://localhost:3000/api/docs
+- **Health Check**: http://localhost:3000/api/health
+
+### 🔐 Autenticação
+
+A API utiliza JWT (JSON Web Tokens) para autenticação. Para acessar endpoints protegidos:
+
+1. **Registre-se** ou **faça login** para obter um token
+2. **Inclua o token** no header `Authorization: Bearer <token>`
+
+### 📊 Métricas e Logs
+
+O serviço possui logs estruturados em inglês com métricas de performance:
+- **Duração das operações** - Tempo de resposta em milissegundos
+- **Cache hits/misses** - Eficiência do cache Redis
+- **IDs de correlação** - Rastreamento de requisições
+- **Logs de erro** - Detalhamento de falhas
 
 ## 🚀 Endpoints da API
 
@@ -105,12 +136,16 @@ Após iniciar a aplicação, acesse:
 
 ### Clientes
 - `POST /api/clients` - Criar cliente
-- `GET /api/clients` - Listar todos os clientes
-- `GET /api/clients/:id` - Buscar cliente por ID
+- `GET /api/clients` - Listar todos os clientes (com filtros)
+- `GET /api/clients/:id` - Buscar cliente por ID (com cache Redis)
 - `PATCH /api/clients/:id` - Atualizar cliente
 - `DELETE /api/clients/:id` - Excluir cliente
 - `GET /api/clients/filter?name=...` - Filtrar clientes por nome
 - `GET /api/clients?email=...` - Filtrar clientes por email
+- `PATCH /api/clients/:id/profile-picture` - Atualizar foto de perfil
+- `POST /api/clients/:id/balance/add` - Adicionar saldo
+- `POST /api/clients/:id/balance/subtract` - Subtrair saldo
+- `GET /api/clients/:id/balance` - Consultar saldo
 
 ### Exemplos de Uso
 
@@ -191,8 +226,10 @@ npm run prisma:seed
 
 ## 🧪 Testes
 
+O projeto possui **98 testes unitários** com cobertura completa:
+
 ```bash
-# Testes unitários
+# Testes unitários (98 testes)
 npm run test
 
 # Testes e2e
@@ -201,6 +238,24 @@ npm run test:e2e
 # Cobertura de testes
 npm run test:cov
 ```
+
+### 📊 Cobertura de Testes
+
+- **ClientService**: 25 testes (CRUD, cache Redis, validações)
+- **ClientController**: 32 testes (endpoints, autenticação, filtros)
+- **AuthService**: 16 testes (registro, login, validação)
+- **AuthController**: 13 testes (autenticação, perfil, validação)
+- **Edge cases**: Cenários de erro e validações
+- **Mocks**: Prisma, Redis, JWT, bcrypt
+
+### 🎯 Cenários Testados
+
+- ✅ **Sucesso** - Operações bem-sucedidas
+- ✅ **Erro** - Tratamento de exceções
+- ✅ **Validação** - Dados inválidos
+- ✅ **Autenticação** - JWT e permissões
+- ✅ **Cache** - Redis hits/misses
+- ✅ **Edge cases** - Cenários extremos
 
 ## 📁 Estrutura do projeto
 
